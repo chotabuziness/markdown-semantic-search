@@ -53,15 +53,20 @@ Proper indexing and query planning are crucial for fast retrieval.
 """
 }
 
-# Add documents
-start = time.time()
-for filename, content in sample_docs.items():
-    with open(filename, "w") as f:
-        f.write(content)
-    search.add_markdown_file(filename, chunk_size=200, overlap=50)
-
-load_time = time.time() - start
-print(f"\n⏱️  Loaded documents in {load_time:.3f}s")
+# Check if documents already exist
+stats = search.get_stats()
+if stats['files'] == 0:
+    # Add documents only if database is empty
+    start = time.time()
+    for filename, content in sample_docs.items():
+        with open(filename, "w") as f:
+            f.write(content)
+        search.add_markdown_file(filename, chunk_size=200, overlap=50)
+    
+    load_time = time.time() - start
+    print(f"\n⏱️  Loaded documents in {load_time:.3f}s")
+else:
+    print(f"\n📚 Using existing documents in database")
 
 # Display stats
 stats = search.get_stats()
@@ -71,28 +76,32 @@ print(f"   Chunks: {stats['chunks']}")
 print(f"   Avg tokens/chunk: {stats['avg_tokens']}")
 print(f"   Unique terms: {stats['unique_terms']}")
 
-# Search examples
-queries = [
-    "how to organize code in python",
-    "fast database queries",
-    "python data structures"
-]
-
 print("\n" + "="*80)
-print("🔍 SEMANTIC SEARCH RESULTS")
+print("🔍 SEMANTIC SEARCH - Enter your queries (type 'quit' to exit)")
 print("="*80)
 
-for query in queries:
+while True:
+    query = input("\nEnter your search query (or 'quit/exit/q' to exit): ").strip()
+    
+    if query.lower() in ['quit', 'exit', 'q']:
+        break
+    
+    if not query:
+        continue
+    
     start = time.time()
     results = search.search(query, top_k=3)
     search_time = time.time() - start
     
     print(f"\nQuery: '{query}' ({search_time*1000:.2f}ms)\n")
     
-    for i, (text, score, source) in enumerate(results, 1):
-        print(f"  {i}. Score: {score:.4f} | {source}")
-        print(f"     {text[:150]}...")
-        print()
+    if results:
+        for i, (text, score, source) in enumerate(results, 1):
+            print(f"  {i}. Score: {score:.4f} | {source}")
+            print(f"     {text[:150]}...")
+            print()
+    else:
+        print("  No results found.")
 
 search.close()
-print("✓ Done!")
+print("\n✓ Done!")

@@ -5,68 +5,37 @@ from service import MarkdownSemanticSearch
 # Initialize search system
 search = MarkdownSemanticSearch("knowledge_base.db")
 
-# Sample markdown documents
-sample_docs = {
-    "python_guide.md": """
-# Python Programming Guide
-
-## Introduction to Python
-Python is a high-level programming language known for its simplicity and readability.
-It supports multiple programming paradigms including procedural, object-oriented, and functional programming.
-
-## Data Structures
-Python provides several built-in data structures like lists, dictionaries, sets, and tuples.
-These data structures are fundamental to writing efficient Python code.
-
-### Lists
-Lists are ordered, mutable collections that can contain elements of different types.
-You can perform operations like append, insert, and remove on lists.
-
-### Dictionaries
-Dictionaries store key-value pairs and provide fast lookup times.
-They are implemented using hash tables internally.
-
-## Functions and Modules
-Functions help organize code into reusable blocks.
-Modules allow you to organize related functions and classes together.
-Python's import system makes it easy to reuse code across projects.
-""",
-        "database_guide.md": """
-# Database Systems Guide
-
-## Introduction to Databases
-Databases are organized collections of structured information or data.
-They are essential for storing and retrieving information efficiently.
-
-## SQL vs NoSQL
-SQL databases use structured query language and relational tables.
-NoSQL databases offer flexible schemas and horizontal scaling.
-
-### DuckDB
-DuckDB is an embedded analytical database management system.
-It provides fast analytical queries without requiring a separate server.
-DuckDB integrates directly into Python applications.
-
-## Query Optimization
-Query optimization improves database performance significantly.
-Proper indexing and query planning are crucial for fast retrieval.
-"""
-}
-
 # Check if documents already exist
 stats = search.get_stats()
 if stats['files'] == 0:
-    # Add documents only if database is empty
-    start = time.time()
-    for filename, content in sample_docs.items():
-        with open(filename, "w") as f:
-            f.write(content)
-        search.add_markdown_file(filename, chunk_size=200, overlap=50)
+    print("\n📚 No documents found in database. Please add markdown files.")
+    print("Enter URLs to markdown files (one per line, empty line to finish):")
     
-    load_time = time.time() - start
-    print(f"\n⏱️  Loaded documents in {load_time:.3f}s")
+    urls = []
+    while True:
+        url = input("URL: ").strip()
+        if not url:
+            break
+        urls.append(url)
+    
+    if urls:
+        start = time.time()
+        loaded_count = 0
+        
+        for url in urls:
+            filename, content = search.download_markdown_from_url(url)
+            if filename and content:
+                with open(filename, "w", encoding='utf-8') as f:
+                    f.write(content)
+                search.add_markdown_file(filename, chunk_size=500, overlap=100)
+                loaded_count += 1
+        
+        load_time = time.time() - start
+        print(f"\n⏱️  Loaded {loaded_count} documents in {load_time:.3f}s")
+    else:
+        print("\n⚠️  No URLs provided. Database remains empty.")
 else:
-    print(f"\n📚 Using existing documents in database")
+    print(f"\n📚 Using existing {stats['files']} documents in database")
 
 # Display stats
 stats = search.get_stats()

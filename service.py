@@ -1,8 +1,12 @@
 import duckdb
 import re
+import math
+import requests
+import os
+
 from typing import List, Tuple, Dict
 from collections import Counter
-import math
+from urllib.parse import urlparse
 
 class MarkdownSemanticSearch:
     def __init__(self, db_path: str = ":memory:"):
@@ -51,6 +55,41 @@ class MarkdownSemanticSearch:
         # Indexes for fast retrieval
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_term ON tfidf_vectors(term)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_chunk ON tfidf_vectors(chunk_id)")
+
+
+    def download_markdown_from_url(self, url: str) -> Tuple[str, str]:
+        """Download markdown file from URL and validate."""
+        try:
+            # Parse URL to get filename
+            parsed_url = urlparse(url)
+            filename = os.path.basename(parsed_url.path)
+            
+            # Validate .md extension
+            if not filename.endswith('.md'):
+                print(f"❌ Error: File must have .md extension. Got: {filename}")
+                return None, None
+            
+            # Download content
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            
+            content = response.text
+            
+            # Basic validation for markdown content
+            if not content.strip():
+                print(f"❌ Error: Downloaded file is empty")
+                return None, None
+                
+            print(f"✅ Downloaded: {filename} ({len(content)} characters)")
+            return filename, content
+            
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Error downloading from {url}: {e}")
+            return None, None
+        except Exception as e:
+            print(f"❌ Error processing {url}: {e}")
+            return None, None
+
    
     def chunk_markdown(self, text: str, chunk_size: int = 500, 
                        overlap: int = 100) -> List[str]:
@@ -127,15 +166,27 @@ class MarkdownSemanticSearch:
     def add_markdown_file(self, file_path: str, chunk_size: int = 500, 
                           overlap: int = 100):
         """
-        Optimized bulk insertion of markdown content.
+        Optimized bulk insertion of markdown content with progress tracking.
         """
+        print(f"📖 Processing {file_path}...")
+        
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
+        print(f"📝 Chunking document ({len(content):,} characters)...")
         chunks = self.chunk_markdown(content, chunk_size, overlap)
+        print(f"✂️  Created {len(chunks)} chunks")
         
-        # Batch tokenization
-        token_lists = [self._tokenize(chunk) for chunk in chunks]
+        # Batch tokenization with progress
+        print(f"🔤 Tokenizing chunks...")
+        token_lists = []
+        for i, chunk in enumerate(chunks):
+            if i % 10 == 0 or i == len(chunks) - 1:
+                print(f"   Progress: {i+1}/{len(chunks)} chunks tokenized", end='\r')
+            token_lists.append(self._tokenize(chunk))
+        print()  # New line after progress
+        
+        print(f"📊 Calculating TF scores...")
         tf_scores_batch = self._calculate_tf_batch(token_lists)
         
         chunk_data = [
@@ -143,31 +194,44 @@ class MarkdownSemanticSearch:
             for idx, (chunk, tokens) in enumerate(zip(chunks, token_lists))
         ]
         
+        print(f"💾 Inserting chunks into database...")
         chunk_ids = []
-        for data in chunk_data:
+        for i, data in enumerate(chunk_data):
+            if i % 10 == 0 or i == len(chunk_data) - 1:
+                print(f"   Progress: {i+1}/{len(chunk_data)} chunks inserted", end='\r')
             result = self.conn.execute("""
                 INSERT INTO chunks (source_file, chunk_text, chunk_index, token_count)
                 VALUES (?, ?, ?, ?)
                 RETURNING id
             """, data).fetchone()
             chunk_ids.append(result)
+        print()  # New line after progress
         
         # Bulk insert TF scores
+        print(f"🔢 Building TF-IDF vectors...")
         tfidf_data = []
         for chunk_id, tf_scores in zip(chunk_ids, tf_scores_batch):
             for term, tf in tf_scores.items():
                 tfidf_data.append((chunk_id[0], term, tf, tf))  # Initial tfidf = tf
         
         if tfidf_data:
-            self.conn.executemany("""
-                INSERT INTO tfidf_vectors (chunk_id, term, tf, tfidf)
-                VALUES (?, ?, ?, ?)
-            """, tfidf_data)
+            print(f"💾 Inserting {len(tfidf_data):,} TF-IDF vectors...")
+            batch_size = 1000
+            for i in range(0, len(tfidf_data), batch_size):
+                batch = tfidf_data[i:i + batch_size]
+                self.conn.executemany("""
+                    INSERT INTO tfidf_vectors (chunk_id, term, tf, tfidf)
+                    VALUES (?, ?, ?, ?)
+                """, batch)
+                progress = min(i + batch_size, len(tfidf_data))
+                print(f"   Progress: {progress:,}/{len(tfidf_data):,} vectors inserted", end='\r')
+            print()  # New line after progress
         
         # Recalculate IDF in bulk
+        print(f"🧮 Updating IDF scores...")
         self._update_idf_scores()
         
-        print(f"✓ Added {len(chunks)} chunks from {file_path}")
+        print(f"✅ Successfully added {len(chunks)} chunks from {file_path}")    
     
     def _update_idf_scores(self):
         """Optimized IDF calculation using SQL aggregation."""

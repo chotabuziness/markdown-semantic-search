@@ -231,7 +231,14 @@ class MarkdownSemanticSearch:
         print(f"🧮 Updating IDF scores...")
         self._update_idf_scores()
         
-        print(f"✅ Successfully added {len(chunks)} chunks from {file_path}")    
+        print(f"✅ Successfully added {len(chunks)} chunks from {file_path}")
+        
+        # Delete the markdown file after successful processing
+        try:
+            os.remove(file_path)
+            print(f"🗑️  Deleted {file_path}")
+        except OSError as e:
+            print(f"⚠️  Could not delete {file_path}: {e}")    
     
     def _update_idf_scores(self):
         """Optimized IDF calculation using SQL aggregation."""

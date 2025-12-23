@@ -2,8 +2,15 @@ import time
 
 from service import MarkdownSemanticSearch
 
+# Get custom database name
+db_name = input("Enter database name (or press Enter for 'knowledge_base.db'): ").strip()
+if not db_name:
+    db_name = "knowledge_base.db"
+if not db_name.endswith(".db"):
+    db_name += ".db"
+
 # Initialize search system
-search = MarkdownSemanticSearch("knowledge_base.db")
+search = MarkdownSemanticSearch(db_name)
 
 # Check if documents already exist
 stats = search.get_stats()

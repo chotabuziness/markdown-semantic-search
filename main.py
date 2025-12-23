@@ -1,4 +1,6 @@
 import time
+import shutil
+import os
 
 from service import MarkdownSemanticSearch
 
@@ -16,31 +18,43 @@ search = MarkdownSemanticSearch(db_name)
 stats = search.get_stats()
 if stats['files'] == 0:
     print("\n📚 No documents found in database. Please add markdown files.")
-    print("Enter URLs to markdown files (one per line, empty line to finish):")
+    print("Enter URLs or local file paths (one per line, empty line to finish):")
     
-    urls = []
+    inputs = []
     while True:
-        url = input("URL: ").strip()
-        if not url:
+        path = input("URL/Path: ").strip()
+        if not path:
             break
-        urls.append(url)
+        inputs.append(path)
     
-    if urls:
+    if inputs:
         start = time.time()
         loaded_count = 0
         
-        for url in urls:
-            filename, content = search.download_markdown_from_url(url)
-            if filename and content:
-                with open(filename, "w", encoding='utf-8') as f:
-                    f.write(content)
-                search.add_markdown_file(filename, chunk_size=500, overlap=100)
-                loaded_count += 1
+        for path in inputs:
+            if path.startswith(('http://', 'https://')):
+                # Handle URL
+                filename, content = search.download_markdown_from_url(path)
+                if filename and content:
+                    with open(filename, "w", encoding='utf-8') as f:
+                        f.write(content)
+                    search.add_markdown_file(filename, chunk_size=500, overlap=100)
+                    loaded_count += 1
+            else:
+                # Handle local file
+                try:
+                    # Copy local file to current directory
+                    filename = os.path.basename(path)
+                    shutil.copy2(path, filename)
+                    search.add_markdown_file(filename, chunk_size=500, overlap=100)
+                    loaded_count += 1
+                except Exception as e:
+                    print(f"❌ Failed to load {path}: {e}")
         
         load_time = time.time() - start
         print(f"\n⏱️  Loaded {loaded_count} documents in {load_time:.3f}s")
     else:
-        print("\n⚠️  No URLs provided. Database remains empty.")
+        print("\n⚠️  No files provided. Database remains empty.")
 else:
     print(f"\n📚 Using existing {stats['files']} documents in database")
 

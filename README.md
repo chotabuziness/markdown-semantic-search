@@ -75,20 +75,22 @@ for text, score, source in results:
 python main.py
 ```
 
+Note: `main.py` now prompts for a database name at startup (press Enter to use `knowledge_base.db`) and accepts both remote URLs and local markdown file paths.
+
 ```
 📚 No documents found in database. Please add markdown files.
-Enter URLs to markdown files (one per line, empty line to finish):
-URL: https://docs.example.com/api-guide.md
+Enter URLs or local file paths (one per line, empty line to finish):
+URL/Path: https://docs.example.com/api-guide.md
 ✅ Downloaded: api-guide.md (45,231 characters)
 📖 Processing api-guide.md...
 📝 Chunking document (45,231 characters)...
 ✂️  Created 127 chunks
 🔤 Tokenizing chunks...
-   Progress: 127/127 chunks tokenized
+    Progress: 127/127 chunks tokenized
 💾 Inserting chunks into database...
-   Progress: 127/127 chunks inserted
+    Progress: 127/127 chunks inserted
 💾 Inserting 3,247 TF-IDF vectors...
-   Progress: 3,247/3,247 vectors inserted
+    Progress: 3,247/3,247 vectors inserted
 ✅ Successfully added 127 chunks from api-guide.md
 🗑️  Deleted api-guide.md
 

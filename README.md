@@ -49,10 +49,10 @@ pip install duckdb requests
 ### Basic Usage
 
 ```python
-from service import MarkdownSemanticSearch
+from src import SearchService
 
 # Initialize
-search = MarkdownSemanticSearch("knowledge_base.db")
+search = SearchService("knowledge_base.db")
 
 # Download and index from URL (auto-cleanup enabled)
 filename, content = search.download_markdown_from_url(
@@ -178,14 +178,14 @@ python main.py
 
 # Or use programmatically
 python
->>> from service import MarkdownSemanticSearch
->>> search = MarkdownSemanticSearch("kb.db")
+>>> from src import SearchService
+>>> search = SearchService("kb.db")
 ```
 
 ### URL-Based Workflow
 
 ```python
-from service import MarkdownSemanticSearch
+from src import SearchService
 import time
 
 # Initialize
@@ -396,7 +396,7 @@ related = search.search(current_article.title, top_k=3)
 
 ## 🔧 API Reference
 
-### `MarkdownSemanticSearch`
+### `SearchService`
 
 #### `__init__(db_path: str = ":memory:")`
 
@@ -410,7 +410,7 @@ Initialize the search system.
 **Example:**
 
 ```python
-search = MarkdownSemanticSearch("my_knowledge_base.db")
+search = SearchService("my_knowledge_base.db")
 ```
 
 ---
@@ -592,7 +592,7 @@ search = MarkdownSemanticSearch("kb.db")
 ### Medium Scale (1,000 - 10,000 documents)
 
 ```python
-search = MarkdownSemanticSearch("kb_large.db")
+search = SearchService("kb_large.db")
 
 # Periodic maintenance
 search.conn.execute("VACUUM")  # Reclaim space
@@ -603,8 +603,8 @@ search.conn.execute("ANALYZE") # Update statistics
 
 ```python
 # Shard by category
-search_eng = MarkdownSemanticSearch("kb_engineering.db")
-search_mkt = MarkdownSemanticSearch("kb_marketing.db")
+search_eng = SearchService("kb_engineering.db")
+search_mkt = SearchService("kb_marketing.db")
 
 # Or use DuckDB partitioning
 # See: https://duckdb.org/docs/data/partitioning/
@@ -650,7 +650,7 @@ python -m pytest
 # Delete old database and recreate
 import os
 os.remove("knowledge_base.db")
-search = MarkdownSemanticSearch("knowledge_base.db")
+search = SearchService("knowledge_base.db")
 ```
 
 ### Issue: URL download fails

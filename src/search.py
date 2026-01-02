@@ -13,8 +13,25 @@ class SearchService:
         self.processor = DocumentProcessor()
         self.downloader = Downloader()
 
-    def add_markdown_file(self, file_path: str, chunk_size: int = 500, overlap: int = 100):
-        """Optimized bulk insertion of markdown content with progress tracking."""
+    def add_markdown_file(self, file_path: str, chunk_size: int = 500, overlap: int = 100, mode: str = 'replace'):
+        """Optimized bulk insertion of markdown content with progress tracking.
+        
+        Args:
+            file_path: Path to the markdown file
+            chunk_size: Size of each chunk in characters
+            overlap: Overlap between chunks
+            mode: 'replace' (default) - delete existing records for this file first
+                  'skip' - if file exists, do nothing
+                  'append' - add records without checking (may cause duplicates)
+        """
+        # Handle existing entries based on mode
+        if mode == 'skip':
+            if self.db.file_exists(file_path):
+                print(f"⏩ Skipping {file_path} (already indexed)")
+                return False
+        elif mode == 'replace':
+            self.db.delete_file(file_path)
+        
         print(f"📖 Processing {file_path}...")
         
         with open(file_path, 'r', encoding='utf-8') as f:

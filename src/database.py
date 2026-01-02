@@ -52,6 +52,26 @@ class DatabaseManager:
             RETURNING id
         """, data).fetchone()[0]
 
+    def delete_file(self, source_file: str):
+        """Remove all chunks and related TF-IDF vectors for a specific file."""
+        # Get chunk IDs for this file
+        chunk_ids = self.conn.execute(
+            "SELECT id FROM chunks WHERE source_file = ?", [source_file]
+        ).fetchall()
+        
+        if chunk_ids:
+            ids = [row[0] for row in chunk_ids]
+            # Delete TF-IDF vectors first (due to foreign key)
+            self.conn.execute(
+                f"DELETE FROM tfidf_vectors WHERE chunk_id IN ({','.join(['?']*len(ids))})", 
+                ids
+            )
+            # Delete chunks
+            self.conn.execute(
+                "DELETE FROM chunks WHERE source_file = ?", [source_file]
+            )
+            print(f"🧹 Cleared existing data for {source_file}")
+
     def insert_tfidf_vectors(self, tfidf_data: list):
         """Bulk insert TF-IDF vectors."""
         self.conn.executemany("""
@@ -62,6 +82,13 @@ class DatabaseManager:
     def get_total_docs(self) -> int:
         """Get total number of chunks."""
         return self.conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
+
+    def file_exists(self, source_file: str) -> bool:
+        """Check if a file is already indexed in the database."""
+        result = self.conn.execute(
+            "SELECT 1 FROM chunks WHERE source_file = ? LIMIT 1", [source_file]
+        ).fetchone()
+        return result is not None
 
     def update_idf_and_tfidf(self, total_docs: int):
         """Update IDF scores and TF-IDF vectors in bulk."""

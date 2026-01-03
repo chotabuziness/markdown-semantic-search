@@ -69,41 +69,25 @@ for text, score, source in results:
     print(f"{score:.4f}: {text[:100]}...")
 ```
 
-### Interactive CLI (Recommended)
+### Pro CLI & Interactive Mode
 
+The app supports both an interactive wizard and direct CLI commands.
+
+#### 🎮 Interactive Mode (Recommended for beginners)
+Simply run without arguments to start the interactive wizard:
 ```bash
 python main.py
 ```
 
-Note: `main.py` now prompts for a database name at startup (press Enter to use `knowledge_base.db`) and accepts both remote URLs and local markdown file paths.
+#### 🛠️ Direct CLI Commands (For power users)
+After installing, you can use the `md-search` command directly:
 
-```
-📚 No documents found in database. Please add markdown files.
-Enter URLs or local file paths (one per line, empty line to finish):
-URL/Path: https://docs.example.com/api-guide.md
-✅ Downloaded: api-guide.md (45,231 characters)
-📖 Processing api-guide.md...
-📝 Chunking document (45,231 characters)...
-✂️  Created 127 chunks
-🔤 Tokenizing chunks...
-    Progress: 127/127 chunks tokenized
-💾 Inserting chunks into database...
-    Progress: 127/127 chunks inserted
-💾 Inserting 3,247 TF-IDF vectors...
-    Progress: 3,247/3,247 vectors inserted
-✅ Successfully added 127 chunks from api-guide.md
-🗑️  Deleted api-guide.md
+*   **Search**: `md-search search "your query" --db kb.db --top 5`
+*   **Add Documents**: `md-search add https://example.com/doc.md ./local_dir/ --db kb.db --mode replace`
+*   **Stats**: `md-search stats --db kb.db`
 
-📊 Knowledge Base Stats:
-   Files: 1
-   Chunks: 127
-   Avg tokens/chunk: 45.23
-   Unique terms: 847
-
-🔍 SEMANTIC SEARCH - Enter your queries (type 'quit' to exit)
-Query: how to authenticate
-Results in 18ms ✨
-```
+> [!TIP]
+> Use `md-search --help` or `md-search <command> --help` to see all available options.
 
 ---
 
@@ -176,6 +160,9 @@ pip install duckdb requests
 # Run interactive CLI
 python main.py
 
+# Or use direct CLI commands
+md-search search "your query"
+```
 # Or use programmatically
 python
 >>> from src import SearchService

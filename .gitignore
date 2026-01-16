@@ -1,4 +1,6 @@
 .vscode/
+**/dist/
+**/build/
 
 **/*.db
 **/*.db.wal

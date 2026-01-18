@@ -103,6 +103,18 @@ class SearchService:
         query_vector = {term: query_tf[term] * idf for term, idf in query_tfidf_res}
         return self.db.search_chunks(query_vector, top_k)
 
+    def get_top_context(self, query: str, top_k: int = 5) -> str:
+        """Get formatted context from top search results for RAG."""
+        results = self.search(query, top_k=top_k)
+        if not results:
+            return "No relevant context found in the knowledge base."
+        
+        context_parts = []
+        for i, (text, score, source) in enumerate(results, 1):
+            context_parts.append(f"--- Context Chunk {i} (Source: {source}) ---\n{text}")
+        
+        return "\n\n".join(context_parts)
+
     def download_markdown_from_url(self, url: str) -> Tuple[str, str]:
         return self.downloader.download_markdown_from_url(url)
 

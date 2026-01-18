@@ -10,15 +10,20 @@ class InteractiveSession:
         self.app = app
 
     def _get_existing_databases(self):
-        return glob.glob("*.db")
+        dbs = glob.glob("*.db")
+        dbs.extend(glob.glob("knowledge/*.db"))
+        return sorted(list(set(dbs)))
 
     def _select_database(self, existing_dbs: List[str]) -> str:
-        print("\n📂 Available Databases:")
-        for i, db in enumerate(existing_dbs, 1):
-            print(f"   {i}. {db}")
+        if existing_dbs:
+            print("\n📂 Available Databases:")
+            for i, db in enumerate(existing_dbs, 1):
+                print(f"   {i}. {db}")
         
         while True:
-            choice = input("\nSelect a database number (or press Enter for 'knowledge_base.db'): ").strip()
+            prompt = "\nSelect a database number" if existing_dbs else "\nEnter database path"
+            choice = input(f"{prompt} (or press Enter for 'knowledge_base.db'): ").strip()
+            
             if not choice:
                 return "knowledge_base.db"
             try:
@@ -40,7 +45,7 @@ class InteractiveSession:
         existing_dbs = self._get_existing_databases()
         
         print("\nWhat would you like to do?")
-        print("1. 🔍 Search an existing database")
+        print("1. 🤖 Ask a question from existing database")
         print("2. 🏗️  Process new documents (replace existing)")
         print("3. ➕ Incremental Add (skip already indexed)")
         
@@ -51,12 +56,7 @@ class InteractiveSession:
             print("❌ Invalid option. Please enter 1, 2, or 3.")
 
         if mode_choice == '1':
-            if not existing_dbs:
-                print("\n⚠️  No existing databases found. Switching to processing mode.")
-                mode_choice = '2'
-                db_name = "knowledge_base.db"
-            else:
-                db_name = self._select_database(existing_dbs)
+            db_name = self._select_database(existing_dbs)
         else:
             prompt = f"\nEnter database name to {'update' if mode_choice == '2' else 'incrementally update'} (default: 'knowledge_base.db'): "
             db_name = input(prompt).strip() or "knowledge_base.db"
@@ -82,17 +82,29 @@ class InteractiveSession:
             self.app.close()
             return
 
+        is_rag_mode = (mode_choice == '1')
+        
         print("\n" + "="*80)
-        print("🔍 SEMANTIC SEARCH - Enter your queries (type 'quit' to exit)")
+        if is_rag_mode:
+            print("🤖 RAG ASK - Ask questions in natural language (type 'quit' to exit)")
+        else:
+            print("🔍 SEMANTIC SEARCH - Enter your queries (type 'quit' to exit)")
         print("="*80)
 
         while True:
-            query = input("\nEnter your search query (or 'quit/exit/q' to exit): ").strip()
+            prompt_text = "\n" + ("Ask your question" if is_rag_mode else "Enter your search query")
+            query = input(f"{prompt_text} (or 'quit/exit/q' to exit): ").strip()
             if query.lower() in ['quit', 'exit', 'q']:
                 break
             if not query:
                 continue
-            self.app.perform_search(query)
+            
+            if is_rag_mode:
+                self.app.ask_question(query)
+            else:
+                # This branch is technically unreachable from wizard now, 
+                # but left in case of future expansion or CLI reuse
+                self.app.perform_search(query)
 
         self.app.close()
         print("\n✓ Done!")
@@ -116,6 +128,12 @@ class CLIHandler:
         search_parser.add_argument("query", help="The natural language query to search for")
         search_parser.add_argument("--db", default="knowledge_base.db", help="Path to the DuckDB database (default: knowledge_base.db)")
         search_parser.add_argument("--top", type=int, default=3, help="Number of top results to return (default: 3)")
+
+        # Ask command
+        ask_parser = subparsers.add_parser("ask", help="🤖 Ask a natural language question based on the knowledge base (RAG)")
+        ask_parser.add_argument("question", help="The question to ask")
+        ask_parser.add_argument("--db", default="knowledge_base.db", help="Path to the DuckDB database (default: knowledge_base.db)")
+        ask_parser.add_argument("--top", type=int, default=5, help="Number of chunks to retrieve for context (default: 5)")
 
         # Add command
         add_parser = subparsers.add_parser("add", help="🏗️  Add files or URLs to the knowledge base")
@@ -142,6 +160,8 @@ class CLIHandler:
         try:
             if args.command == "search":
                 app.perform_search(args.query, top_k=args.top)
+            elif args.command == "ask":
+                app.ask_question(args.question, top_k=args.top)
             elif args.command == "add":
                 app.process_inputs(args.paths, mode=args.mode)
             elif args.command == "stats":

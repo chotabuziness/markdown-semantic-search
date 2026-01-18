@@ -42,8 +42,17 @@ This library proves you can with:
 
 ### Installation
 
+Using `uv` (recommended):
 ```bash
-pip install duckdb requests
+# Clone and install dependencies automatically
+git clone https://github.com/chotabuziness/markdown-semantic-search.git
+cd markdown-semantic-search
+uv pip install -e .
+```
+
+Or using `pip`:
+```bash
+pip install -e .
 ```
 
 ### Basic Usage
@@ -73,18 +82,38 @@ for text, score, source in results:
 
 The app supports both an interactive wizard and direct CLI commands.
 
-#### 🎮 Interactive Mode (Recommended for beginners)
-Simply run without arguments to start the interactive wizard:
+#### 🎮 Interactive Mode (Recommended)
+Simply run the interface to start the interactive wizard:
 ```bash
-python main.py
+uv run main.py
 ```
 
 #### 🛠️ Direct CLI Commands (For power users)
 After installing, you can use the `md-search` command directly:
 
-*   **Search**: `md-search search "your query" --db kb.db --top 5`
-*   **Add Documents**: `md-search add https://example.com/doc.md ./local_dir/ --db kb.db --mode replace`
-*   **Stats**: `md-search stats --db kb.db`
+*   **Search**: `uv run md-search search "your query" --db kb.db --top 5`
+*   **Ask (RAG)**: `uv run md-search ask "What is X?" --db kb.db --top 5`
+*   **Add Documents**: `uv run md-search add https://example.com/doc.md ./local_dir/ --db kb.db --mode replace`
+*   **Stats**: `uv run md-search stats --db kb.db`
+
+---
+
+## 🤖 RAG Configuration
+
+The "Ask" feature uses [LangGraph](https://github.com/langchain-ai/langgraph) and [OpenRouter](https://openrouter.ai/) for high-quality, natural language responses.
+
+### Environment Variables
+Create a `.env` file in the project root:
+```ini
+OPENROUTER_API_KEY=your_openrouter_key_here
+OPENROUTER_MODEL=openai/gpt-5  # Optional, defaults to gemini-2.0-flash
+OPENROUTER_API_BASE=https://openrouter.ai/api/v1
+```
+
+### Key RAG Features
+- **Strict Context Adherence**: The assistant only answers based on your documents. If information is missing, it politely apologizes instead of hallucinating.
+- **Conversation Memory**: Support for follow-up questions within a session.
+- **Source Citations**: Every answer includes the source file name for verification.
 
 > [!TIP]
 > Use `md-search --help` or `md-search <command> --help` to see all available options.
@@ -95,15 +124,16 @@ After installing, you can use the `md-search` command directly:
 
 ### Core Capabilities
 
+- 🤖 **LangGraph RAG Agent** - Natural language question answering with sources and memory
 - 🌐 **Direct URL ingestion** - Paste markdown URLs, system handles everything
 - 🔄 **Auto-cleanup** - Temporary files deleted after indexing
 - 📊 **Real-time progress** - Visual feedback for every operation
-- ✨ **Semantic search** - Understands meaning, not just keywords
+- ✨ **Semantic search** - Understands meaning via TF-IDF, no heavy weights required
 - 📄 **Smart chunking** - Respects paragraph/sentence boundaries
-- ⚡ **Fast queries** - 15-50ms typical response time
+- ⚡ **Fast queries** - 15-50ms typical retrieval response time
 - 💾 **Persistent storage** - DuckDB embedded database
 - 🎨 **Beautiful CLI** - Emoji-enhanced user experience
-- 📈 **Built-in analytics** - Query stats and performance metrics
+- 📈 **Reliable Assistant** - Strictly context-based, no-hallucination policy
 
 ### Technical Highlights
 

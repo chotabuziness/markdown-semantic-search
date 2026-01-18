@@ -82,6 +82,38 @@ class MarkdownSearchApp:
         else:
             print("  No results found.")
 
+    def ask_question(self, query: str, top_k: int = 5):
+        """Invoke the LangGraph agent to answer a question based on indexed content."""
+        from .agent import rag_agent
+        
+        print(f"\n🤔 Thinking about: '{query}'...")
+        start = time.time()
+        
+        # Prepare state
+        initial_state = {
+            "query": query,
+            "db_path": self.db_name,
+            "top_k": top_k,
+            "context": "",
+            "response": ""
+        }
+        
+        # Invoke agent
+        try:
+            # Config for checkpointer (in-memory memory)
+            config = {"configurable": {"thread_id": self.db_name}}
+            
+            result = rag_agent.invoke(initial_state, config=config)
+            duration = time.time() - start
+            
+            print(f"\n🤖 Response ({duration:.2f}s):")
+            print("-" * 40)
+            print(result['response'])
+            print("-" * 40)
+        except Exception as e:
+            print(f"\n❌ Error generating response: {e}")
+            print("   Make sure OPENROUTER_API_KEY is set in your environment.")
+
     def get_stats(self) -> dict:
         """Get database statistics."""
         return self.search_service.get_stats()
